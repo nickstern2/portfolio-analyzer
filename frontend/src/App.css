@@ -182,3 +182,128 @@
     border-right-color: var(--border);
   }
 }
+.portfolio-app {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.portfolio-app h1 {
+  margin: 0 0 32px;
+}
+
+.holdings-panel h2 {
+  margin-bottom: 16px;
+}
+
+.holding-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.holding-field {
+  display: grid;
+  gap: 6px;
+}
+
+.holding-field label {
+  color: var(--text-h);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.holding-field input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-h);
+  background: var(--bg);
+  font: inherit;
+}
+
+.holding-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.holding-form button,
+.holdings-table button {
+  padding: 9px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: white;
+  background: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.holding-form .secondary-button,
+.holdings-table .secondary-button {
+  border-color: var(--border);
+  color: var(--text-h);
+  background: transparent;
+}
+
+.form-error,
+.storage-error {
+  grid-column: 1 / -1;
+  color: #b42318;
+  font-size: 14px;
+}
+
+.storage-error {
+  margin-bottom: 16px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.holdings-table th,
+.holdings-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.holdings-table th {
+  color: var(--text-h);
+  font-size: 14px;
+}
+
+.holdings-table tfoot td {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .portfolio-app {
+    padding: 24px 16px;
+  }
+
+  .holding-form {
+    grid-template-columns: 1fr;
+  }
+
+  .holding-form-actions {
+    flex-wrap: wrap;
+  }
+}

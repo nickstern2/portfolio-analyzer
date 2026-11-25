@@ -1,32 +1,28 @@
 import React from "react";
-
-interface Holding {
-  id: string;
-  ticker: string;
-  name: string;
-  value: number;
-}
+import type { Holding } from "../types/holding";
 
 interface HoldingsTableProps {
   holdings: Holding[];
+  onEdit: (holding: Holding) => void;
+  test?: any;
 }
 
-const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings }) => {
-  const totalValue = holdings.reduce((total, holding) => {
-    return total + holding.value;
-  }, 0);
+const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings, onEdit }) => {
+  const totalValue = holdings.reduce(
+    (total, holding) => total + holding.value,
+    0,
+  );
 
   return (
-    <div>
-      <h2>Portfolio Holdings</h2>
-
-      <table>
+    <div className="table-scroll">
+      <table className="holdings-table">
         <thead>
           <tr>
             <th>Ticker</th>
             <th>Name</th>
             <th>Value</th>
             <th>Weight</th>
+            <th>Actions</th>
           </tr>
         </thead>
 
@@ -42,6 +38,16 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings }) => {
                   : "0.0"}
                 %
               </td>
+              <td>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => onEdit(holding)}
+                  aria-label={`Edit ${holding.ticker}`}
+                >
+                  Edit
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -50,10 +56,12 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings }) => {
             <td colSpan={2}>Total Portfolio Value</td>
             <td>${totalValue.toLocaleString()}</td>
             <td>{totalValue > 0 ? "100.0%" : "0.0%"}</td>
+            <td />
           </tr>
         </tfoot>
       </table>
     </div>
   );
 };
+
 export default HoldingsTable;
