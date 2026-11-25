@@ -4,7 +4,6 @@ import type { Holding } from "../types/holding";
 interface HoldingsTableProps {
   holdings: Holding[];
   onEdit: (holding: Holding) => void;
-  test?: any;
 }
 
 const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings, onEdit }) => {
@@ -14,8 +13,8 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings, onEdit }) => {
   );
 
   return (
-    <div className="table-scroll">
-      <table className="holdings-table">
+    <div className='table-scroll'>
+      <table className='holdings-table'>
         <thead>
           <tr>
             <th>Ticker</th>
@@ -40,11 +39,10 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings, onEdit }) => {
               </td>
               <td>
                 <button
-                  type="button"
-                  className="secondary-button"
+                  type='button'
+                  className='secondary-button'
                   onClick={() => onEdit(holding)}
-                  aria-label={`Edit ${holding.ticker}`}
-                >
+                  aria-label={`Edit ${holding.ticker}`}>
                   Edit
                 </button>
               </td>
