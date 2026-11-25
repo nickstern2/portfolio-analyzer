@@ -1,12 +1,24 @@
 import { useState } from "react";
+import {
+  Box,
+  Card,
+  CardContent,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { PieChart } from "@mui/x-charts/PieChart";
 import type { Holding } from "../types/holding";
+import { formatCurrency } from "../utils/formatCurrency";
 
 interface PortfolioOverviewProps {
   holdings: Holding[];
 }
 
-const chartRadius = 52;
-const chartCircumference = 2 * Math.PI * chartRadius;
 const chartColors = [
   "#7c3aed",
   "#0891b2",
@@ -18,15 +30,7 @@ const chartColors = [
   "#4f46e5",
 ];
 
-const currencyFormatter = new Intl.NumberFormat(undefined, {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 2,
-});
-
-function formatCurrency(value: number) {
-  return currencyFormatter.format(value);
-}
+const seriesId = "portfolio-allocation";
 
 const PortfolioOverview = ({ holdings }: PortfolioOverviewProps) => {
   const [activeHoldingId, setActiveHoldingId] = useState<string | null>(null);
@@ -34,8 +38,16 @@ const PortfolioOverview = ({ holdings }: PortfolioOverviewProps) => {
     (total, holding) => total + holding.value,
     0,
   );
-  const activeHolding =
-    holdings.find((holding) => holding.id === activeHoldingId) ?? null;
+  const chartHoldings = holdings
+    .map((holding, index) => ({ holding, index }))
+    .filter(({ holding }) => holding.value > 0);
+  const activeChartIndex = chartHoldings.findIndex(
+    ({ holding }) => holding.id === activeHoldingId,
+  );
+  const activeIndex = holdings.findIndex(
+    (holding) => holding.id === activeHoldingId,
+  );
+  const activeHolding = activeIndex >= 0 ? holdings[activeIndex] : null;
   const activeWeight =
     activeHolding && totalValue > 0
       ? (activeHolding.value / totalValue) * 100
@@ -46,159 +58,296 @@ const PortfolioOverview = ({ holdings }: PortfolioOverviewProps) => {
     null,
   );
 
-  let chartOffset = 0;
+  const handleHighlightChange = (item: {
+    dataIndex?: number;
+  } | null) => {
+    setActiveHoldingId(
+      item?.dataIndex === undefined
+        ? null
+        : chartHoldings[item.dataIndex]?.holding.id ?? null,
+    );
+  };
 
   return (
-    <section className="portfolio-overview" aria-label="Portfolio overview">
-      <div className="overview-metrics">
-        <article className="metric-card">
-          <h2>Total portfolio value</h2>
-          <p className="metric-value">{formatCurrency(totalValue)}</p>
-        </article>
-        <article className="metric-card">
-          <h2>Holdings</h2>
-          <p className="metric-value">{holdings.length}</p>
-        </article>
-        <article className="metric-card">
-          <h2>Largest holding</h2>
-          {largestHolding ? (
-            <>
-              <p className="metric-value">{largestHolding.ticker}</p>
-              <p className="metric-detail">
-                {formatCurrency(largestHolding.value)}
-              </p>
-            </>
-          ) : (
-            <p className="metric-value">—</p>
-          )}
-        </article>
-      </div>
+    <Stack component="section" aria-label="Portfolio overview" spacing={2.5}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "repeat(2, minmax(0, 1fr))",
+            sm: "repeat(3, minmax(0, 1fr))",
+          },
+          gap: 2,
+        }}
+      >
+        <MetricCard
+          label="Total portfolio value"
+          value={formatCurrency(totalValue)}
+        />
+        <MetricCard label="Holdings" value={String(holdings.length)} />
+        <MetricCard
+          label="Largest holding"
+          value={largestHolding?.ticker ?? "—"}
+          detail={
+            largestHolding ? formatCurrency(largestHolding.value) : undefined
+          }
+        />
+      </Box>
 
-      <section className="allocation-card" aria-labelledby="allocation-heading">
-        <h2 id="allocation-heading">Allocation by holding</h2>
-        <div
-          className="allocation-layout"
-          onMouseLeave={() => setActiveHoldingId(null)}
-          onBlur={(event) => {
-            const nextTarget = event.relatedTarget;
-            if (
-              !(nextTarget instanceof Node) ||
-              !event.currentTarget.contains(nextTarget)
-            ) {
-              setActiveHoldingId(null);
-            }
-          }}
-        >
-          <div
-            className={`allocation-chart${activeHolding ? " has-active-holding" : ""}`}
+      <Card
+        component="section"
+        variant="outlined"
+        aria-labelledby="allocation-heading"
+        onMouseLeave={() => setActiveHoldingId(null)}
+        onBlur={(event) => {
+          const nextTarget = event.relatedTarget;
+          if (
+            !(nextTarget instanceof Node) ||
+            !event.currentTarget.contains(nextTarget)
+          ) {
+            setActiveHoldingId(null);
+          }
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2, sm: 3 }, "&:last-child": { pb: 3 } }}>
+          <Typography
+            id="allocation-heading"
+            component="h2"
+            variant="h6"
+            sx={{ mb: 2 }}
           >
-            <svg
-              viewBox="0 0 140 140"
-              role="group"
-              aria-label="Portfolio allocation by holding. Focus or hover a segment for details."
+            Allocation by holding
+          </Typography>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "minmax(0, 1fr)",
+                sm: "240px minmax(0, 1fr)",
+              },
+              alignItems: "center",
+              gap: { xs: 2, sm: 3 },
+            }}
+          >
+            <Box
+              sx={{
+                position: "relative",
+                width: "min(100%, 240px)",
+                aspectRatio: "1",
+                justifySelf: "center",
+              }}
             >
-              <circle
-                className="allocation-chart-track"
-                cx="70"
-                cy="70"
-                r={chartRadius}
-              />
-              {totalValue > 0 &&
-                holdings.map((holding, index) => {
-                  if (holding.value === 0) {
-                    return null;
+              {totalValue > 0 ? (
+                <PieChart
+                  width={240}
+                  height={240}
+                  hideLegend
+                  skipAnimation
+                  series={[
+                    {
+                      id: seriesId,
+                      data: chartHoldings.map(({ holding, index }) => ({
+                        id: holding.id,
+                        value: holding.value,
+                        label: holding.ticker,
+                        color: chartColors[index % chartColors.length],
+                      })),
+                      innerRadius: 78,
+                      outerRadius: 108,
+                      paddingAngle: 1,
+                      cornerRadius: 2,
+                      highlightScope: {
+                        highlight: "item",
+                        fade: "global",
+                      },
+                      valueFormatter: (item) => formatCurrency(item.value),
+                    },
+                  ]}
+                  highlightedItem={
+                    activeChartIndex >= 0
+                      ? { seriesId, dataIndex: activeChartIndex }
+                      : null
                   }
+                  onHighlightChange={(item) => {
+                    if (item) {
+                      handleHighlightChange(item);
+                    }
+                  }}
+                  margin={0}
+                />
+              ) : (
+                <Box
+                  aria-label="No allocation values"
+                  sx={{
+                    width: 216,
+                    height: 216,
+                    maxWidth: "100%",
+                    boxSizing: "border-box",
+                    border: 32,
+                    borderStyle: "solid",
+                    borderColor: "divider",
+                    borderRadius: "50%",
+                    mx: "auto",
+                    mt: 1.5,
+                  }}
+                />
+              )}
+              <Stack
+                spacing={0.25}
+                sx={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: 156,
+                  height: 156,
+                  boxSizing: "border-box",
+                  borderRadius: "50%",
+                  bgcolor: "background.paper",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  px: 1.5,
+                  textAlign: "center",
+                  pointerEvents: "none",
+                  overflow: "hidden",
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  {activeHolding?.ticker ?? "Total value"}
+                </Typography>
+                <Typography
+                  variant="h6"
+                  component="strong"
+                  noWrap
+                  sx={{
+                    maxWidth: "100%",
+                    fontSize: "clamp(0.875rem, 3.5vw, 1.25rem)",
+                    fontWeight: 700,
+                  }}
+                >
+                  {formatCurrency(activeHolding?.value ?? totalValue)}
+                </Typography>
+                {activeHolding && (
+                  <>
+                    <Typography variant="caption">
+                      {activeWeight.toFixed(1)}% of portfolio
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        display: "-webkit-box",
+                        overflow: "hidden",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 2,
+                      }}
+                    >
+                      {activeHolding.name}
+                    </Typography>
+                  </>
+                )}
+              </Stack>
+            </Box>
 
-                  const segmentLength =
-                    chartCircumference * (holding.value / totalValue);
-                  const offset = chartOffset;
-                  chartOffset += segmentLength;
-                  const weight = (holding.value / totalValue) * 100;
-                  const isActive = activeHoldingId === holding.id;
+            <List disablePadding>
+              {holdings.map((holding, index) => {
+                const weight =
+                  totalValue > 0 ? (holding.value / totalValue) * 100 : 0;
+                const isActive = activeHoldingId === holding.id;
 
-                  return (
-                    <circle
-                      key={holding.id}
-                      className={`allocation-chart-segment${isActive ? " is-active" : ""}`}
-                      cx="70"
-                      cy="70"
-                      r={chartRadius}
-                      stroke={chartColors[index % chartColors.length]}
-                      strokeDasharray={`${segmentLength} ${chartCircumference - segmentLength}`}
-                      strokeDashoffset={-offset}
-                      role="img"
-                      tabIndex={0}
-                      aria-label={`${holding.ticker}, ${holding.name}, ${formatCurrency(holding.value)}, ${weight.toFixed(1)}% of portfolio`}
+                return (
+                  <ListItem key={holding.id} disablePadding>
+                    <ListItemButton
+                      selected={isActive}
                       onMouseEnter={() => setActiveHoldingId(holding.id)}
                       onFocus={() => setActiveHoldingId(holding.id)}
-                    />
-                  );
-                })}
-            </svg>
-            <div className="allocation-chart-center">
-              {activeHolding ? (
-                <>
-                  <span>{activeHolding.ticker}</span>
-                  <strong>{formatCurrency(activeHolding.value)}</strong>
-                  <small>{activeWeight.toFixed(1)}% of portfolio</small>
-                  <span className="allocation-center-name">
-                    {activeHolding.name}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span>Total value</span>
-                  <strong>{formatCurrency(totalValue)}</strong>
-                </>
-              )}
-            </div>
-          </div>
-
-          <ul className="allocation-legend">
-            {holdings.map((holding, index) => {
-              const weight =
-                totalValue > 0 ? (holding.value / totalValue) * 100 : 0;
-              const isActive = activeHoldingId === holding.id;
-
-              return (
-                <li
-                  key={holding.id}
-                  onMouseEnter={() => setActiveHoldingId(holding.id)}
-                >
-                  <button
-                    type="button"
-                    className={`allocation-legend-item${isActive ? " is-active" : ""}`}
-                    onFocus={() => setActiveHoldingId(holding.id)}
-                  >
-                    <span
-                      className="allocation-swatch"
-                      style={{
-                        backgroundColor:
-                          chartColors[index % chartColors.length],
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "16px minmax(0, 1fr) auto",
+                        gap: 1.5,
+                        borderBottom: 1,
+                        borderColor: "divider",
+                        "&:last-child": { borderBottom: 0 },
                       }}
-                      aria-hidden="true"
-                    />
-                    <span className="allocation-holding">
-                      <strong>{holding.ticker}</strong>
-                      <span>{holding.name}</span>
-                    </span>
-                    <span className="allocation-weight">
-                      {weight.toFixed(1)}%
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-        {totalValue === 0 && (
-          <p className="allocation-empty">
-            Add a value to a holding to see its portfolio allocation.
-          </p>
-        )}
-      </section>
-    </section>
+                    >
+                      <ListItemIcon sx={{ minWidth: 0 }}>
+                        <Box
+                          sx={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            bgcolor:
+                              chartColors[index % chartColors.length],
+                          }}
+                        />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: 600 }}
+                          >
+                            {holding.ticker}
+                          </Typography>
+                        }
+                        secondary={holding.name}
+                        slotProps={{
+                          secondary: {
+                            noWrap: true,
+                            variant: "caption",
+                          },
+                        }}
+                      />
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {weight.toFixed(1)}%
+                      </Typography>
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })}
+            </List>
+          </Box>
+          {totalValue === 0 && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 1.5 }}
+            >
+              Add a value to a holding to see its portfolio allocation.
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
+    </Stack>
   );
 };
+
+interface MetricCardProps {
+  label: string;
+  value: string;
+  detail?: string;
+}
+
+const MetricCard = ({ label, value, detail }: MetricCardProps) => (
+  <Card variant="outlined">
+    <CardContent sx={{ p: { xs: 2, sm: 2.5 }, "&:last-child": { pb: 2.5 } }}>
+      <Typography variant="body2" color="text.secondary" gutterBottom>
+        {label}
+      </Typography>
+      <Typography
+        variant="h5"
+        component="p"
+        sx={{ fontWeight: 700, overflowWrap: "anywhere" }}
+      >
+        {value}
+      </Typography>
+      {detail && (
+        <Typography variant="body2" color="text.secondary">
+          {detail}
+        </Typography>
+      )}
+    </CardContent>
+  </Card>
+);
 
 export default PortfolioOverview;
