@@ -1,6 +1,7 @@
 import { useState } from "react";
 import HoldingForm from "./components/HoldingForm";
 import HoldingsTable from "./components/HoldingsTable";
+import PortfolioOverview from "./components/PortfolioOverview";
 import { useHoldings } from "./hooks/useHoldings";
 import type { Holding } from "./types/holding";
 import "./App.css";
@@ -22,6 +23,7 @@ function App() {
           {storageError}
         </p>
       )}
+      <PortfolioOverview holdings={holdings} />
       <section className="holdings-panel">
         <h2>Portfolio Holdings</h2>
         <HoldingForm
