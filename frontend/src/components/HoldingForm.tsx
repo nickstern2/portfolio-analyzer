@@ -1,4 +1,17 @@
-import React, { useState, type FormEvent } from "react";
+import { useEffect } from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Stack,
+  TextField,
+} from "@mui/material";
+import { Add, SaveOutlined } from "@mui/icons-material";
+import {
+  Controller,
+  useForm,
+  type SubmitHandler,
+} from "react-hook-form";
 import type { Holding, HoldingInput } from "../types/holding";
 
 interface HoldingFormProps {
@@ -8,107 +21,168 @@ interface HoldingFormProps {
   onCancel: () => void;
 }
 
-const emptyDraft = { ticker: "", name: "", value: "" };
+interface HoldingFormValues {
+  ticker: string;
+  name: string;
+  value: string;
+}
 
-const HoldingForm: React.FC<HoldingFormProps> = ({
+const emptyValues: HoldingFormValues = { ticker: "", name: "", value: "" };
+
+const HoldingForm = ({
   holding,
   onAdd,
   onUpdate,
   onCancel,
-}) => {
-  const [draft, setDraft] = useState(() =>
-    holding
+}: HoldingFormProps) => {
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<HoldingFormValues>({
+    defaultValues: holding
       ? {
           ticker: holding.ticker,
           name: holding.name,
           value: String(holding.value),
         }
-      : emptyDraft,
-  );
-  const [formError, setFormError] = useState<string | null>(null);
+      : emptyValues,
+  });
 
-  const resetForm = () => {
-    setDraft(emptyDraft);
-    setFormError(null);
-  };
+  useEffect(() => {
+    reset(
+      holding
+        ? {
+            ticker: holding.ticker,
+            name: holding.name,
+            value: String(holding.value),
+          }
+        : emptyValues,
+    );
+  }, [holding, reset]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const ticker = draft.ticker.trim().toUpperCase();
-    const name = draft.name.trim();
-    const value = Number(draft.value);
-
-    if (
-      !ticker ||
-      !name ||
-      draft.value.trim() === "" ||
-      !Number.isFinite(value) ||
-      value < 0
-    ) {
-      setFormError("Enter a ticker, name, and a valid non-negative value.");
-      return;
-    }
+  const onSubmit: SubmitHandler<HoldingFormValues> = (values) => {
+    const updatedHolding = {
+      ticker: values.ticker.trim().toUpperCase(),
+      name: values.name.trim(),
+      value: Number(values.value),
+    };
 
     if (holding) {
-      onUpdate({ id: holding.id, ticker, name, value });
+      onUpdate({ id: holding.id, ...updatedHolding });
     } else {
-      onAdd({ ticker, name, value });
-      resetForm();
+      onAdd(updatedHolding);
+      reset(emptyValues);
     }
   };
 
   return (
-    <form className="holding-form" onSubmit={handleSubmit}>
-      <div className="holding-field">
-        <label htmlFor="holding-ticker">Ticker</label>
-        <input
-          id="holding-ticker"
-          autoComplete="off"
-          required
-          value={draft.ticker}
-          onChange={(event) =>
-            setDraft({ ...draft, ticker: event.target.value })
-          }
-        />
-      </div>
-      <div className="holding-field">
-        <label htmlFor="holding-name">Name</label>
-        <input
-          id="holding-name"
-          required
-          value={draft.name}
-          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-        />
-      </div>
-      <div className="holding-field">
-        <label htmlFor="holding-value">Value</label>
-        <input
-          id="holding-value"
-          type="number"
-          min="0"
-          step="0.01"
-          required
-          value={draft.value}
-          onChange={(event) =>
-            setDraft({ ...draft, value: event.target.value })
-          }
-        />
-      </div>
-      <div className="holding-form-actions">
-        <button type="submit">{holding ? "Save changes" : "Add holding"}</button>
-        {holding && (
-          <button type="button" className="secondary-button" onClick={onCancel}>
-            Cancel
-          </button>
+    <Box
+      component="form"
+      noValidate
+      onSubmit={handleSubmit(onSubmit)}
+      sx={{ p: { xs: 2, sm: 3 } }}
+    >
+      <Stack spacing={2}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "1fr 1.5fr 1fr" },
+            gap: 2,
+          }}
+        >
+          <Controller
+            name="ticker"
+            control={control}
+            rules={{
+              required: "Ticker is required.",
+              validate: (value) =>
+                value.trim().length > 0 || "Ticker is required.",
+            }}
+            render={({ field: { ref, ...field } }) => (
+              <TextField
+                {...field}
+                inputRef={ref}
+                label="Ticker"
+                autoComplete="off"
+                error={Boolean(errors.ticker)}
+                helperText={errors.ticker?.message}
+                fullWidth
+              />
+            )}
+          />
+          <Controller
+            name="name"
+            control={control}
+            rules={{
+              required: "Name is required.",
+              validate: (value) =>
+                value.trim().length > 0 || "Name is required.",
+            }}
+            render={({ field: { ref, ...field } }) => (
+              <TextField
+                {...field}
+                inputRef={ref}
+                label="Name"
+                error={Boolean(errors.name)}
+                helperText={errors.name?.message}
+                fullWidth
+              />
+            )}
+          />
+          <Controller
+            name="value"
+            control={control}
+            rules={{
+              required: "Value is required.",
+              validate: (value) => {
+                const amount = Number(value);
+                return (
+                  (value.trim() !== "" &&
+                    Number.isFinite(amount) &&
+                    amount >= 0) ||
+                  "Enter a valid non-negative value."
+                );
+              },
+            }}
+            render={({ field: { ref, ...field } }) => (
+              <TextField
+                {...field}
+                inputRef={ref}
+                label="Value"
+                type="number"
+                slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                error={Boolean(errors.value)}
+                helperText={errors.value?.message}
+                fullWidth
+              />
+            )}
+          />
+        </Box>
+        {Object.keys(errors).length > 0 && (
+          <Alert severity="error">
+            Please fix the highlighted fields before saving.
+          </Alert>
         )}
-      </div>
-      {formError && (
-        <p className="form-error" role="alert">
-          {formError}
-        </p>
-      )}
-    </form>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ justifyContent: "flex-end" }}
+        >
+          <Button onClick={onCancel} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            startIcon={holding ? <SaveOutlined /> : <Add />}
+          >
+            {holding ? "Save changes" : "Add holding"}
+          </Button>
+        </Stack>
+      </Stack>
+    </Box>
   );
 };
 

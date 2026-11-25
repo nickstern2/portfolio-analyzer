@@ -28,10 +28,17 @@ export function useHoldings() {
     );
   };
 
+  const deleteHolding = (holdingId: string) => {
+    saveHoldings(
+      portfolio.holdings.filter((holding) => holding.id !== holdingId),
+    );
+  };
+
   return {
     holdings: portfolio.holdings,
     storageError: portfolio.storageError,
     addHolding,
     updateHolding,
+    deleteHolding,
   };
 }
